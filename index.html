@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meal Base - Decentralized Base Meal Planner</title>
+  
+  <!-- Static Custom CSS -->
+  <link rel="stylesheet" href="static/style.css">
+  
+  <!-- Lucide Icons UMD -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Ethers.js v6 UMD -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.1/ethers.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Navigation bar -->
+  <nav class="navbar">
+    <div class="container navbar-content">
+      <!-- Logo & App Name -->
+      <div class="logo-container">
+        <img src="static/logo.jpg" alt="Meal Base Logo" class="logo-img">
+        <span class="logo-text">Meal Base</span>
+      </div>
+
+      <!-- Network and Connection Status -->
+      <div class="nav-controls">
+        <div id="networkBadge" class="network-badge hidden">
+          <span class="network-dot" id="networkDot"></span>
+          <span id="networkText">Not Connected</span>
+        </div>
+
+        <button id="connectBtn" onclick="toggleWalletConnection()" class="btn-connect">
+          <i data-lucide="wallet" style="width: 1rem; height: 1rem;"></i>
+          <span id="connectBtnText">Connect Wallet</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Body Content -->
+  <main class="container" style="padding-top: 2rem; padding-bottom: 2rem;">
+    
+    <!-- Hero Header -->
+    <div class="hero">
+      <div>
+        <h1 class="hero-title">Decentralized Meal Planner</h1>
+        <p class="hero-subtitle">Plan your weekly nutrition on Base Mainnet. Organize your meals, recipes, and track calories fully on-chain.</p>
+      </div>
+      
+      <!-- Tab Controls -->
+      <div class="tabs-container">
+        <button onclick="switchTab('planner')" id="tab-planner" class="tab-btn active">
+          <i data-lucide="calendar" style="width: 1rem; height: 1rem;"></i> My Planner
+        </button>
+        <button onclick="switchTab('social')" id="tab-social" class="tab-btn">
+          <i data-lucide="users" style="width: 1rem; height: 1rem;"></i> Inspect Plan
+        </button>
+        <button onclick="switchTab('explorer')" id="tab-explorer" class="tab-btn">
+          <i data-lucide="search" style="width: 1rem; height: 1rem;"></i> Recipe Explorer
+        </button>
+      </div>
+    </div>
+
+    <!-- Active View Warning Banner (Social Viewer) -->
+    <div id="viewingBanner" class="banner hidden">
+      <div class="banner-left">
+        <i data-lucide="eye" style="width: 1.25rem; height: 1.25rem;"></i>
+        <div>
+          <strong>Viewing Plan For:</strong>
+          <span class="banner-address" id="viewingAddressText">0x0</span>
+        </div>
+      </div>
+      <button onclick="resetToUserPlan()" class="btn-banner-clear">
+        Return to My Plan
+      </button>
+    </div>
+
+    <!-- TAB 1: Planner Dashboard -->
+    <div id="view-planner">
+      <!-- Summary metrics cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon blue">
+            <i data-lucide="flame" style="width: 1.5rem; height: 1.5rem;"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Weekly Total Calories</span>
+            <span class="stat-value" id="statWeeklyCalories">0 kcal</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon cyan">
+            <i data-lucide="scale" style="width: 1.5rem; height: 1.5rem;"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Avg. Daily Calories</span>
+            <span class="stat-value" id="statAvgCalories">0 kcal</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon purple">
+            <i data-lucide="check-square" style="width: 1.5rem; height: 1.5rem;"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">Planned Days</span>
+            <span class="stat-value" id="statPlannedDays">0 / 7</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weekly Schedule Grid -->
+      <div class="planner-grid" id="weeklyGrid">
+        <!-- Rendered dynamically by app.js -->
+        <div style="grid-column: 1 / -1; padding: 4rem 0; text-align: center; color: var(--text-secondary);">
+          <p>Initializing Meal Base Interface...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Social Finder -->
+    <div id="view-social" class="view-panel hidden">
+      <div class="view-card">
+        <div class="view-card-header">
+          <div class="view-card-icon">
+            <i data-lucide="users" style="width: 1.25rem; height: 1.25rem;"></i>
+          </div>
+          <h2 class="view-card-title">Inspect External Meal Plan</h2>
+        </div>
+        <p class="view-card-desc">Enter any address below to inspect their on-chain weekly planner details. Ideal for sharing meal guides.</p>
+
+        <div class="form-group">
+          <label class="form-label">Ethereum Wallet Address</label>
+          <div class="input-with-action">
+            <input type="text" id="socialAddressInput" placeholder="0x..." class="form-input">
+            <button onclick="pasteToInput('socialAddressInput')" class="btn-input-action" title="Paste address">
+              <i data-lucide="clipboard" style="width: 1rem; height: 1rem;"></i>
+            </button>
+          </div>
+        </div>
+
+        <button onclick="loadSocialPlan()" class="btn-block">
+          Load Base Schedule
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 3: Recipe Explorer -->
+    <div id="view-explorer" class="view-panel hidden">
+      <div class="view-card">
+        <div class="view-card-header">
+          <div class="view-card-icon">
+            <i data-lucide="search" style="width: 1.25rem; height: 1.25rem;"></i>
+          </div>
+          <h2 class="view-card-title">Recipe URI Lookup</h2>
+        </div>
+        <p class="view-card-desc">Directly query the Base Mainnet contract storage for a recipe link.</p>
+
+        <div class="form-group">
+          <label class="form-label">Target Address</label>
+          <div class="input-with-action">
+            <input type="text" id="explorerAddressInput" placeholder="0x..." class="form-input">
+            <button onclick="pasteToInput('explorerAddressInput')" class="btn-input-action" title="Paste address">
+              <i data-lucide="clipboard" style="width: 1rem; height: 1rem;"></i>
+            </button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-cols: 1fr 1fr; gap: 1rem; margin-bottom: 0.5rem;">
+          <div class="form-group">
+            <label class="form-label">Planning Day</label>
+            <select id="explorerDaySelect" class="form-select">
+              <option value="0">Monday</option>
+              <option value="1">Tuesday</option>
+              <option value="2">Wednesday</option>
+              <option value="3">Thursday</option>
+              <option value="4">Friday</option>
+              <option value="5">Saturday</option>
+              <option value="6">Sunday</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Meal Time</label>
+            <select id="explorerTimeSelect" class="form-select">
+              <option value="0">Morning (Breakfast)</option>
+              <option value="1">Afternoon (Lunch)</option>
+              <option value="2">Evening (Dinner)</option>
+            </select>
+          </div>
+        </div>
+
+        <button onclick="queryRecipeUri()" class="btn-block">
+          Fetch Recipe Link
+        </button>
+
+        <div id="recipeResultContainer" class="result-box hidden">
+          <span class="result-label">Result Recipe URL</span>
+          <div class="result-content" id="recipeResultText">No URL set</div>
+          <a id="recipeResultLink" href="#" target="_blank" class="result-link">
+            Visit Recipe <i data-lucide="external-link" style="width: 0.875rem; height: 0.875rem;"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contract Metadata Section -->
+    <div class="footer-meta">
+      <div class="footer-meta-left">
+        <span class="meta-title">Meal Base Contract Metadata</span>
+        <div class="meta-row">
+          <span class="meta-label">Contract:</span>
+          <span class="meta-value">0x7118e3327466FD1254bd848992fa8Eb9fBfE2d15</span>
+          <button onclick="copyToClipboard('0x7118e3327466FD1254bd848992fa8Eb9fBfE2d15')" class="btn-copy" title="Copy Address">
+            <i data-lucide="copy" style="width: 1rem; height: 1rem;"></i>
+          </button>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Owner:</span>
+          <span class="meta-value" id="metaOwnerAddress">Fetching Owner...</span>
+        </div>
+      </div>
+      <div>
+        <a href="https://basescan.org/address/0x7118e3327466FD1254bd848992fa8Eb9fBfE2d15" target="_blank" class="btn-outline">
+          Basescan Explorer <i data-lucide="external-link" style="width: 0.875rem; height: 0.875rem;"></i>
+        </a>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Edit Day Modal -->
+  <div id="editModal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <i data-lucide="calendar-plus" style="width: 1.25rem; height: 1.25rem; color: var(--accent-base);"></i>
+          <h3 class="modal-title" id="editModalTitle">Update Meals - Monday</h3>
+        </div>
+        <button onclick="closeEditModal()" class="btn-modal-close">
+          <i data-lucide="x" style="width: 1.25rem; height: 1.25rem;"></i>
+        </button>
+      </div>
+
+      <!-- Scrollable Form -->
+      <form id="editForm" onsubmit="submitMeals(event)" class="modal-body">
+        <input type="hidden" id="editDayId" value="0">
+        
+        <div class="form-group">
+          <label class="form-label">Planning Day</label>
+          <select id="editDaySelect" class="form-select">
+            <option value="0">Monday</option>
+            <option value="1">Tuesday</option>
+            <option value="2">Wednesday</option>
+            <option value="3">Thursday</option>
+            <option value="4">Friday</option>
+            <option value="5">Saturday</option>
+            <option value="6">Sunday</option>
+          </select>
+        </div>
+
+        <!-- Breakfast -->
+        <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem; margin-top: 1rem;">
+          <div class="form-row-title">
+            <div class="form-row-num">1</div>
+            <span>Morning (Breakfast)</span>
+          </div>
+          <div class="form-grid-inputs">
+            <div class="form-group form-group-in-grid">
+              <input type="text" id="m0_name" placeholder="Meal Name" required class="form-input">
+            </div>
+            <div class="form-group form-group-in-grid">
+              <input type="url" id="m0_url" placeholder="Recipe Link" required class="form-input">
+            </div>
+            <div class="form-group form-group-in-grid">
+              <input type="number" id="m0_calories" placeholder="Calories" required min="0" max="65535" class="form-input">
+            </div>
+          </div>
+        </div>
+
+        <!-- Lunch -->
+        <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem; margin-top: 1rem;">
+          <div class="form-row-title">
+            <div class="form-row-num">2</div>
+            <span>Afternoon (Lunch)</span>
+          </div>
+          <div class="form-grid-inputs">
+            <div class="form-group form-group-in-grid">
+              <input type="text" id="m1_name" placeholder="Meal Name" required class="form-input">
+            </div>
+            <div class="form-group form-group-in-grid">
+              <input type="url" id="m1_url" placeholder="Recipe Link" required class="form-input">
+            </div>
+            <div class="form-group form-group-in-grid">
+              <input type="number" id="m1_calories" placeholder="Calories" required min="0" max="65535" class="form-input">
+            </div>
+          </div>
+        </div>
+
+        <!-- Dinner -->
+        <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem; margin-top: 1rem;">
+          <div class="form-row-title">
+            <div class="form-row-num">3</div>
+            <span>Evening (Dinner)</span>
+          </div>
+          <div class="form-grid-inputs">
+            <div class="form-group form-group-in-grid">
+              <input type="text" id="m2_name" placeholder="Meal Name" required class="form-input">
+            </div>
+            <div class="form-group form-group-in-grid">
+              <input type="url" id="m2_url" placeholder="Recipe Link" required class="form-input">
+            </div>
+            <div class="form-group form-group-in-grid">
+              <input type="number" id="m2_calories" placeholder="Calories" required min="0" max="65535" class="form-input">
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="form-footer">
+          <button type="button" onclick="closeEditModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Submit Transaction</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Center -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Static Custom App Script -->
+  <script src="static/app.js"></script>
+</body>
+</html>
