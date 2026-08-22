@@ -1,6 +1,6 @@
 # Meal Base
 
-Meal Base is a decentralized weekly meal planner for Base Mainnet. It lets users save breakfast, lunch, and dinner for each day of the week, including a recipe URL and calorie count, directly in the `MealPlanner` smart contract.
+Meal Base is a decentralized weekly meal planner on Base Mainnet. It lets users save breakfast, lunch, and dinner for each day of the week, including a recipe URL and calorie count, directly in the `MealPlanner` smart contract.
 
 The static web app connects to Base Mainnet through Ethers.js and a browser wallet such as MetaMask. A wallet is required to create or clear a plan. Plans are public on-chain data, so the app can also inspect another address's weekly plan and look up individual recipe URLs without connecting a wallet.
 
